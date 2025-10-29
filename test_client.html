@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test Client</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        h1 { 
+            font-size: 2em; 
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        #log { 
+            background: #000; 
+            color: #0f0; 
+            padding: 15px; 
+            height: 400px; 
+            overflow-y: auto; 
+            font-family: monospace;
+            border: 2px solid #4CAF50;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button { 
+            margin: 5px; 
+            padding: 15px 25px;
+            font-size: 1.2em;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active {
+            background: #45a049;
+        }
+        .status { 
+            font-weight: bold; 
+            margin: 15px 0;
+            font-size: 1.3em;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+        .button-group {
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌐 WebSocket Test Client</h1>
+    <div class="status">Status: <span id="status">Disconnected</span></div>
+    <div class="button-group">
+        <button onclick="connect()">Connect</button>
+        <button onclick="sendTestData()">Send Test Data</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    <div id="log"></div>
+
+    <script>
+        let ws = null;
+        // For ngrok WebSocket tunnels, use wss:// (secure WebSocket)
+        const serverUrl = "wss://olimpia-spriest-basilia.ngrok-free.dev/";
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${time}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message); // Also log to console
+        }
+
+        function updateStatus(status) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = status;
+            statusEl.style.color = status === 'Connected' ? '#4CAF50' : 
+                                   status === 'Disconnected' ? '#ff9800' : '#f44336';
+        }
+
+        function connect() {
+            log(`🔌 Attempting to connect to ${serverUrl}...`);
+            
+            // Close existing connection if any
+            if (ws && ws.readyState !== WebSocket.CLOSED) {
+                log("⚠ Closing existing connection...");
+                ws.close();
+            }
+            
+            try {
+                ws = new WebSocket(serverUrl);
+                
+                ws.onopen = function(event) {
+                    log("✅ Connected to server!");
+                    updateStatus("Connected");
+                };
+                
+                ws.onmessage = function(event) {
+                    log(`📨 Received: ${event.data}`);
+                };
+                
+                ws.onerror = function(error) {
+                    log(`❌ WebSocket error occurred`);
+                    console.error("Full WebSocket error:", error);
+                    updateStatus("Error");
+                };
+                
+                ws.onclose = function(event) {
+                    log(`❌ Connection closed. Code: ${event.code}, Reason: ${event.reason || 'None'}, Clean: ${event.wasClean}`);
+                    updateStatus("Disconnected");
+                };
+            } catch (e) {
+                log(`❌ Exception: ${e.message}`);
+                console.error("Full exception:", e);
+                updateStatus("Error");
+            }
+        }
+
+        function sendTestData() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log("⚠ Not connected. Please connect first.");
+                return;
+            }
+
+            const testData = {
+                time: Date.now() / 1000,
+                handedness: "left",
+                position: { x: 1.234, y: 5.678, z: -2.345 },
+                orientation: { x: 0.1, y: 0.2, z: 0.3, w: 0.9 }
+            };
+
+            try {
+                ws.send(JSON.stringify(testData));
+                log(`📤 Sent test data`);
+            } catch (e) {
+                log(`❌ Send failed: ${e.message}`);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log("🧹 Log cleared");
+        }
+
+        // Page load handler
+        window.addEventListener('DOMContentLoaded', function() {
+            log("✅ Page loaded successfully on Meta Quest browser");
+            log("📱 Browser: " + navigator.userAgent.substring(0, 80));
+            log("🌐 Click 'Connect' to start WebSocket connection");
+            updateStatus("Disconnected");
+        });
+
+        // Error handler for the page
+        window.addEventListener('error', function(e) {
+            log(`❌ Page error: ${e.message}`);
+            console.error("Full page error:", e);
+        });
+    </script>
+</body>
+</html>
